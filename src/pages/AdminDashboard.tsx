@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -7,68 +6,69 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Shield, Users, Search, Building, Mail, Calendar, Download, Filter } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
-interface Client {
-  id: string;
-  companyName: string;
-  contactName: string;
-  email: string;
-  phone: string;
-  gstin: string;
-  clientType: string;
-  address: string;
-  city: string;
-  state: string;
-  pincode: string;
-  registrationDate: string;
-  status: string;
-}
+import { toast } from "@/hooks/use-toast";
+import { apiService, type Client, type Stats } from "@/services/api";
 
 const AdminDashboard = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [filteredClients, setFilteredClients] = useState<Client[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<Stats>({
     totalClients: 0,
     exporters: 0,
     importers: 0,
     both: 0,
-    thisMonth: 0
+    thisMonth: 0,
+    activeDeclarations: 0,
+    pendingReviews: 0,
+    completedThisMonth: 0
   });
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Load all clients from localStorage
-    const savedClients = localStorage.getItem('clients');
-    if (savedClients) {
-      const clientsData = JSON.parse(savedClients);
-      setClients(clientsData);
-      setFilteredClients(clientsData);
-      
-      // Calculate stats
-      const thisMonth = new Date().getMonth();
-      const thisYear = new Date().getFullYear();
-      
-      const stats = clientsData.reduce((acc: any, client: Client) => {
-        acc.totalClients++;
-        
-        const regDate = new Date(client.registrationDate);
-        if (regDate.getMonth() === thisMonth && regDate.getFullYear() === thisYear) {
-          acc.thisMonth++;
-        }
-        
-        switch (client.clientType) {
-          case 'exporter': acc.exporters++; break;
-          case 'importer': acc.importers++; break;
-          case 'both': acc.both++; break;
-        }
-        
-        return acc;
-      }, { totalClients: 0, exporters: 0, importers: 0, both: 0, thisMonth: 0 });
-      
-      setStats(stats);
-    }
+    loadData();
   }, []);
+
+  const loadData = async () => {
+    setIsLoading(true);
+    
+    try {
+      // Fetch all clients from API
+      const clientsResponse = await apiService.getClients();
+      if (clientsResponse.data) {
+        setClients(clientsResponse.data.clients);
+        setFilteredClients(clientsResponse.data.clients);
+      } else if (clientsResponse.error) {
+        toast({
+          title: "Failed to load clients",
+          description: clientsResponse.message,
+          variant: "destructive"
+        });
+      }
+
+      // Fetch statistics from API
+      const statsResponse = await apiService.getStats();
+      if (statsResponse.data) {
+        setStats(statsResponse.data);
+      } else if (statsResponse.error) {
+        toast({
+          title: "Failed to load statistics",
+          description: statsResponse.message,
+          variant: "destructive"
+        });
+      }
+
+    } catch (error) {
+      toast({
+        title: "Connection Error",
+        description: "Unable to connect to the server. Please ensure the backend is running.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     // Filter clients based on search and filter type
@@ -153,174 +153,185 @@ const AdminDashboard = () => {
       </header>
 
       <div className="container mx-auto px-4 py-8">
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Clients</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalClients}</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Exporters</CardTitle>
-              <Building className="h-4 w-4 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{stats.exporters}</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Importers</CardTitle>
-              <Building className="h-4 w-4 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">{stats.importers}</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Both Types</CardTitle>
-              <Building className="h-4 w-4 text-purple-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-purple-600">{stats.both}</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">This Month</CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.thisMonth}</div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Client Management */}
-        <Card>
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <div>
-                <CardTitle>Client Management</CardTitle>
-                <CardDescription>
-                  Manage all registered exporters and importers
-                </CardDescription>
-              </div>
-              <Button onClick={exportData} variant="outline" className="flex items-center space-x-2">
-                <Download className="h-4 w-4" />
-                <span>Export CSV</span>
-              </Button>
+        {isLoading ? (
+          <div className="flex justify-center items-center py-16">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading admin dashboard...</p>
             </div>
-          </CardHeader>
-          <CardContent>
-            {/* Search and Filter */}
-            <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4 mb-6">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search by company, contact, email, or GSTIN..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <div className="flex items-center space-x-2">
-                <Filter className="h-4 w-4 text-gray-400" />
-                <Select value={filterType} onValueChange={setFilterType}>
-                  <SelectTrigger className="w-48">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Client Types</SelectItem>
-                    <SelectItem value="exporter">Exporters Only</SelectItem>
-                    <SelectItem value="importer">Importers Only</SelectItem>
-                    <SelectItem value="both">Both Types</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+          </div>
+        ) : (
+          <>
+            {/* Stats Overview */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Clients</CardTitle>
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.totalClients}</div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Exporters</CardTitle>
+                  <Building className="h-4 w-4 text-green-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-green-600">{stats.exporters}</div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Importers</CardTitle>
+                  <Building className="h-4 w-4 text-blue-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-blue-600">{stats.importers}</div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Both Types</CardTitle>
+                  <Building className="h-4 w-4 text-purple-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-purple-600">{stats.both}</div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">This Month</CardTitle>
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.thisMonth}</div>
+                </CardContent>
+              </Card>
             </div>
 
-            {/* Client List */}
-            {filteredClients.length > 0 ? (
-              <div className="space-y-4">
-                {filteredClients.map((client) => (
-                  <div key={client.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                    <div className="flex justify-between items-start">
-                      <div className="space-y-2 flex-1">
-                        <div className="flex items-center space-x-3">
-                          <h4 className="font-semibold text-lg">{client.companyName}</h4>
-                          <Badge className={getClientTypeColor(client.clientType)}>
-                            {client.clientType}
-                          </Badge>
-                          <Badge variant="outline" className="bg-green-50 text-green-700">
-                            {client.status}
-                          </Badge>
-                        </div>
-                        
-                        <div className="grid md:grid-cols-2 gap-4">
-                          <div className="space-y-1">
-                            <div className="flex items-center space-x-2 text-sm">
-                              <Users className="h-4 w-4 text-gray-400" />
-                              <span>{client.contactName}</span>
+            {/* Client Management */}
+            <Card>
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle>Client Management</CardTitle>
+                    <CardDescription>
+                      Manage all registered exporters and importers
+                    </CardDescription>
+                  </div>
+                  <Button onClick={exportData} variant="outline" className="flex items-center space-x-2">
+                    <Download className="h-4 w-4" />
+                    <span>Export CSV</span>
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {/* Search and Filter */}
+                <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4 mb-6">
+                  <div className="flex-1 relative">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Search by company, contact, email, or GSTIN..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Filter className="h-4 w-4 text-gray-400" />
+                    <Select value={filterType} onValueChange={setFilterType}>
+                      <SelectTrigger className="w-48">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Client Types</SelectItem>
+                        <SelectItem value="exporter">Exporters Only</SelectItem>
+                        <SelectItem value="importer">Importers Only</SelectItem>
+                        <SelectItem value="both">Both Types</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Client List */}
+                {filteredClients.length > 0 ? (
+                  <div className="space-y-4">
+                    {filteredClients.map((client) => (
+                      <div key={client.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                        <div className="flex justify-between items-start">
+                          <div className="space-y-2 flex-1">
+                            <div className="flex items-center space-x-3">
+                              <h4 className="font-semibold text-lg">{client.companyName}</h4>
+                              <Badge className={getClientTypeColor(client.clientType)}>
+                                {client.clientType}
+                              </Badge>
+                              <Badge variant="outline" className="bg-green-50 text-green-700">
+                                {client.status}
+                              </Badge>
                             </div>
-                            <div className="flex items-center space-x-2 text-sm">
-                              <Mail className="h-4 w-4 text-gray-400" />
-                              <span>{client.email}</span>
+                            
+                            <div className="grid md:grid-cols-2 gap-4">
+                              <div className="space-y-1">
+                                <div className="flex items-center space-x-2 text-sm">
+                                  <Users className="h-4 w-4 text-gray-400" />
+                                  <span>{client.contactName}</span>
+                                </div>
+                                <div className="flex items-center space-x-2 text-sm">
+                                  <Mail className="h-4 w-4 text-gray-400" />
+                                  <span>{client.email}</span>
+                                </div>
+                              </div>
+                              
+                              <div className="space-y-1">
+                                <p className="text-sm text-gray-600">GSTIN: <span className="font-mono">{client.gstin}</span></p>
+                                <p className="text-sm text-gray-600">
+                                  Location: {[client.city, client.state].filter(Boolean).join(', ') || 'Not provided'}
+                                </p>
+                              </div>
                             </div>
                           </div>
                           
-                          <div className="space-y-1">
-                            <p className="text-sm text-gray-600">GSTIN: <span className="font-mono">{client.gstin}</span></p>
-                            <p className="text-sm text-gray-600">
-                              Location: {[client.city, client.state].filter(Boolean).join(', ') || 'Not provided'}
-                            </p>
+                          <div className="text-right text-sm text-gray-500 ml-4">
+                            <p>Registered</p>
+                            <p className="font-medium">{formatDate(client.registrationDate)}</p>
+                            <p className="text-xs mt-1">ID: CB-{client.id}</p>
                           </div>
                         </div>
                       </div>
-                      
-                      <div className="text-right text-sm text-gray-500 ml-4">
-                        <p>Registered</p>
-                        <p className="font-medium">{formatDate(client.registrationDate)}</p>
-                        <p className="text-xs mt-1">ID: CB-{client.id}</p>
-                      </div>
-                    </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-16">
-                {clients.length === 0 ? (
-                  <>
-                    <Users className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">No Clients Found</h3>
-                    <p className="text-gray-600 mb-6">Start by registering your first client</p>
-                    <Link to="/register">
-                      <Button className="bg-blue-600 hover:bg-blue-700">
-                        Register First Client
-                      </Button>
-                    </Link>
-                  </>
                 ) : (
-                  <>
-                    <Search className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">No Results Found</h3>
-                    <p className="text-gray-600">Try adjusting your search criteria or filters</p>
-                  </>
+                  <div className="text-center py-16">
+                    {clients.length === 0 ? (
+                      <>
+                        <Users className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                        <h3 className="text-xl font-semibold text-gray-900 mb-2">No Clients Found</h3>
+                        <p className="text-gray-600 mb-6">Start by registering your first client</p>
+                        <Link to="/register">
+                          <Button className="bg-blue-600 hover:bg-blue-700">
+                            Register First Client
+                          </Button>
+                        </Link>
+                      </>
+                    ) : (
+                      <>
+                        <Search className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                        <h3 className="text-xl font-semibold text-gray-900 mb-2">No Results Found</h3>
+                        <p className="text-gray-600">Try adjusting your search criteria or filters</p>
+                      </>
+                    )}
+                  </div>
                 )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
     </div>
   );

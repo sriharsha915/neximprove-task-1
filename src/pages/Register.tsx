@@ -8,10 +8,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { Shield, ArrowLeft } from "lucide-react";
+import { apiService, type ClientRegistrationData } from "@/services/api";
 
 const Register = () => {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ClientRegistrationData>({
     companyName: "",
     contactName: "",
     email: "",
@@ -26,12 +27,12 @@ const Register = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: keyof ClientRegistrationData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const validateForm = () => {
-    const required = ['companyName', 'contactName', 'email', 'gstin', 'clientType'];
+    const required: (keyof ClientRegistrationData)[] = ['companyName', 'contactName', 'email', 'gstin', 'clientType'];
     const missing = required.filter(field => !formData[field]);
     
     if (missing.length > 0) {
@@ -75,21 +76,21 @@ const Register = () => {
     setIsSubmitting(true);
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const response = await apiService.registerClient(formData);
       
-      // Store client data in localStorage (simulating database)
-      const existingClients = JSON.parse(localStorage.getItem('clients') || '[]');
-      const newClient = {
-        id: Date.now().toString(),
-        ...formData,
-        registrationDate: new Date().toISOString(),
-        status: 'Active'
-      };
-      
-      existingClients.push(newClient);
-      localStorage.setItem('clients', JSON.stringify(existingClients));
-      localStorage.setItem('currentClient', JSON.stringify(newClient));
+      if (response.error) {
+        toast({
+          title: response.error,
+          description: response.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Store current client data in localStorage for dashboard display
+      if (response.data?.client) {
+        localStorage.setItem('currentClient', JSON.stringify(response.data.client));
+      }
 
       toast({
         title: "Registration Successful!",

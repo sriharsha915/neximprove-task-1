@@ -1,73 +1,212 @@
-# Welcome to your Lovable project
 
-## Project info
+# CustomsBridge - Customs Brokerage Platform
 
-**URL**: https://lovable.dev/projects/97b1f441-cab9-4e93-9ecc-a177ad7a3c4d
+A professional customs brokerage platform for managing client onboarding, declarations, and compliance workflows.
 
-## How can I edit this code?
+## Project Structure
 
-There are several ways of editing your application.
+```
+customsbridge/
+├── frontend/                 # React TypeScript frontend
+│   ├── src/
+│   │   ├── components/      # Reusable UI components
+│   │   ├── pages/          # Application pages
+│   │   ├── services/       # API service layer
+│   │   └── hooks/          # Custom React hooks
+│   └── package.json
+├── backend/                 # Express.js API server
+│   ├── server.ts           # Main server file
+│   ├── db.json            # JSON database (development)
+│   ├── package.json
+│   └── tsconfig.json
+└── README.md
+```
 
-**Use Lovable**
+## Features
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/97b1f441-cab9-4e93-9ecc-a177ad7a3c4d) and start prompting.
+- **Client Registration**: Comprehensive form for exporter/importer onboarding
+- **Dashboard**: Real-time statistics and client management
+- **Admin Panel**: Administrative oversight of all registered clients
+- **API Integration**: RESTful backend with proper validation
+- **Responsive Design**: Mobile-friendly interface
+- **Data Export**: CSV export functionality for client data
 
-Changes made via Lovable will be committed automatically to this repo.
+## Technology Stack
 
-**Use your preferred IDE**
+### Frontend
+- React 18 with TypeScript
+- Vite for build tooling
+- Tailwind CSS for styling
+- Shadcn/UI component library
+- React Router for navigation
+- React Query for state management
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Backend
+- Node.js with Express.js
+- TypeScript for type safety
+- bcryptjs for password hashing
+- JSON Web Tokens for authentication
+- CORS for cross-origin requests
+- File-based JSON database (development)
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## Getting Started
 
-Follow these steps:
+### Prerequisites
+- Node.js 18+ 
+- npm or yarn package manager
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### Backend Setup
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+1. Navigate to the backend directory:
+```bash
+cd backend
+```
 
-# Step 3: Install the necessary dependencies.
-npm i
+2. Install dependencies:
+```bash
+npm install
+```
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+3. Start the development server:
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+The backend API will be available at `http://localhost:3001`
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Frontend Setup
 
-**Use GitHub Codespaces**
+1. Navigate to the frontend directory (root):
+```bash
+cd ../
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+2. Install dependencies:
+```bash
+npm install
+```
 
-## What technologies are used for this project?
+3. Start the development server:
+```bash
+npm run dev
+```
 
-This project is built with:
+The frontend will be available at `http://localhost:8080`
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## API Endpoints
 
-## How can I deploy this project?
+### Client Management
+- `POST /api/clients` - Register a new client
+- `GET /api/clients` - Get all clients
+- `GET /api/clients/:id` - Get specific client
+- `GET /api/stats` - Get dashboard statistics
+- `GET /api/health` - Health check
 
-Simply open [Lovable](https://lovable.dev/projects/97b1f441-cab9-4e93-9ecc-a177ad7a3c4d) and click on Share -> Publish.
+### Request/Response Examples
 
-## Can I connect a custom domain to my Lovable project?
+#### Register Client
+```bash
+POST /api/clients
+Content-Type: application/json
 
-Yes, you can!
+{
+  "companyName": "Acme Exports Ltd",
+  "contactName": "John Doe",
+  "email": "john@acmeexports.com",
+  "gstin": "27AAAAA0000A1Z5",
+  "clientType": "exporter",
+  "phone": "+91-9876543210",
+  "address": "123 Business Park",
+  "city": "Mumbai",
+  "state": "Maharashtra",
+  "pincode": "400001"
+}
+```
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## Database Schema
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+### Client Entity
+```typescript
+interface Client {
+  id: string;
+  companyName: string;
+  contactName: string;
+  email: string;
+  phone: string;
+  gstin: string;
+  clientType: 'exporter' | 'importer' | 'both';
+  address: string;
+  city: string;
+  state: string;
+  pincode: string;
+  registrationDate: string;
+  status: string;
+}
+```
+
+## Security Features
+
+- Input validation and sanitization
+- GSTIN format validation
+- Email format validation
+- Password hashing with bcrypt
+- JWT token authentication (ready for implementation)
+- CORS configuration
+- SQL injection prevention (when using SQL database)
+
+## Migration to PostgreSQL
+
+To migrate from JSON file storage to PostgreSQL:
+
+1. Install PostgreSQL dependencies:
+```bash
+npm install pg @types/pg
+```
+
+2. Replace file operations with PostgreSQL queries
+3. Add database connection configuration
+4. Implement proper migration scripts
+5. Add connection pooling for production
+
+## Deployment
+
+### Backend Deployment
+- Configure environment variables
+- Set up PostgreSQL database
+- Deploy to cloud platform (AWS, Heroku, DigitalOcean)
+- Configure CORS for production domain
+
+### Frontend Deployment
+- Update API base URL for production
+- Build optimized bundle: `npm run build`
+- Deploy static files to CDN or hosting service
+- Configure domain and SSL certificate
+
+## Environment Variables
+
+Create `.env` files for production:
+
+### Backend (.env)
+```
+PORT=3001
+JWT_SECRET=your-super-secret-jwt-key
+DATABASE_URL=postgresql://user:password@localhost:5432/customsbridge
+NODE_ENV=production
+```
+
+### Frontend (.env)
+```
+VITE_API_URL=https://api.yourdomain.com
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
+
+## License
+
+This project is licensed under the MIT License.
